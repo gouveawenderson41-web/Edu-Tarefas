@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#155EEF">
+  <meta name="description" content="Organize tarefas e prazos acadêmicos no celular, mesmo sem internet.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <title>EduTarefas</title>
+</head>
+<body>
+  <header class="topo"><div><span class="marca">ET</span><div><h1>EduTarefas</h1><p>Seus prazos em ordem</p></div></div><button id="instalar" class="btn secundario" hidden>Instalar</button></header>
+  <main>
+    <section class="resumo" aria-label="Resumo das tarefas">
+      <article><span id="total">0</span><small>Tarefas</small></article>
+      <article><span id="abertas">0</span><small>Pendentes</small></article>
+      <article><span id="feitas">0</span><small>Concluídas</small></article>
+    </section>
+    <section class="cartao">
+      <h2>Adicionar tarefa</h2>
+      <form id="form-tarefa">
+        <label for="titulo">O que você precisa fazer?</label>
+        <input id="titulo" name="titulo" maxlength="150" placeholder="Ex.: Entregar projeto de Python" required>
+        <label for="prazo">Prazo</label>
+        <input id="prazo" name="prazo" type="date" required>
+        <button class="btn principal" type="submit">Adicionar tarefa</button>
+        <p id="aviso" class="aviso" role="status"></p>
+      </form>
+    </section>
+    <section class="lista-secao">
+      <div class="lista-titulo"><h2>Minhas tarefas</h2><button id="exportar" class="texto-btn">Exportar dados</button></div>
+      <label class="sr-only" for="busca">Buscar tarefas</label><input id="busca" class="busca" placeholder="Buscar por título...">
+      <nav class="filtros" aria-label="Filtrar tarefas">
+        <button data-filtro="todas" class="ativo">Todas</button><button data-filtro="pendentes">Pendentes</button><button data-filtro="concluidas">Concluídas</button><button data-filtro="vencidas">Vencidas</button>
+      </nav>
+      <ul id="lista" class="lista"></ul>
+      <p id="vazio" class="vazio">Nenhuma tarefa encontrada.</p>
+    </section>
+    <section class="dados-local"><strong>Seus dados ficam neste aparelho.</strong><span>Use “Exportar dados” para guardar uma cópia JSON.</span></section>
+  </main>
+  <footer>EduTarefas · Organize seus estudos</footer>
+  <script src="app.js" defer></script>
+</body>
+</html>
