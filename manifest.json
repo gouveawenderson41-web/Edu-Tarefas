@@ -1,0 +1,12 @@
+{
+  "name": "EduTarefas - Controle de prazos",
+  "short_name": "EduTarefas",
+  "description": "Organize tarefas e prazos acadêmicos no celular.",
+  "lang": "pt-BR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F7FAFF",
+  "theme_color": "#155EEF",
+  "icons": [{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
