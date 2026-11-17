@@ -1,1 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="44" fill="#155EEF"/><rect x="42" y="42" width="108" height="108" rx="22" fill="#ffffff"/><path d="M67 97l19 19 41-44" fill="none" stroke="#2563EB" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/><text x="96" y="171" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="bold" fill="white">EduTarefas</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="a" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1d4ed8" />
+      <stop offset="100%" stop-color="#172554" />
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="52" fill="url(#a)" />
+  <path d="M64 74h124v22H64zm0 43h128v22H64zm0 43h96v22H64zm0 38h108v22H64z" fill="#fff" />
+  <circle cx="188" cy="155" r="30" fill="#f59e0b" />
+  <path d="M182 155l10 10 22-24" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+</svg>

@@ -1,86 +1,56 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EduAgendaFácil | Organize seus prazos</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
-</head>
-<body>
-<header class="topo">
-  <div class="container topo-conteudo">
-    <div class="marca">
-      <div class="marca-icone">EA</div>
-      <div><h1>EduAgendaFácil</h1><p>Seu tempo, suas tarefas, tudo organizado.</p></div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="description" content="EduTarefas — organização de tarefas escolares e prazos acadêmicos" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+    <title>EduTarefas</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">ET</div>
+          <div>
+            <h1>EduTarefas</h1>
+            <p>Seu planejamento escolar</p>
+          </div>
+        </div>
+        <button id="instalar" class="btn ghost" hidden>Instalar app</button>
+      </header>
+      <main class="container">
+        <section class="stats" aria-label="Resumo geral">
+          <article class="stat-card"><span id="totalTarefas">0</span><small>Total</small></article>
+          <article class="stat-card"><span id="pendentes">0</span><small>Pendentes</small></article>
+          <article class="stat-card"><span id="concluidas">0</span><small>Concluídas</small></article>
+          <article class="stat-card warning"><span id="atrasadas">0</span><small>Atrasadas</small></article>
+        </section>
+        <section class="panel">
+          <div class="panel-header"><h2>Nova tarefa</h2></div>
+          <form id="formTarefa" class="task-form">
+            <div class="field-group"><label for="titulo">Título da tarefa</label><input id="titulo" name="titulo" type="text" maxlength="160" placeholder="Ex.: Entregar trabalho de matemática" required /></div>
+            <div class="two-columns">
+              <div class="field-group"><label for="disciplina">Disciplina</label><select id="disciplina"><option value="Geral">Geral</option><option value="Matemática">Matemática</option><option value="Português">Português</option><option value="História">História</option><option value="Geografia">Geografia</option><option value="Ciências">Ciências</option><option value="Inglês">Inglês</option><option value="Arte">Arte</option><option value="Educação Física">Educação Física</option></select></div>
+              <div class="field-group"><label for="prioridade">Prioridade</label><select id="prioridade"><option value="Baixa">Baixa</option><option value="Média" selected>Média</option><option value="Alta">Alta</option><option value="Urgente">Urgente</option></select></div>
+            </div>
+            <div class="two-columns">
+              <div class="field-group"><label for="prazo">Prazo</label><input id="prazo" type="date" required /></div>
+              <div class="field-group"><label for="observacoes">Observações</label><input id="observacoes" type="text" maxlength="200" placeholder="Opcional" /></div>
+            </div>
+            <button type="submit" class="btn primary">Adicionar tarefa</button><p id="mensagem" class="message" aria-live="polite"></p>
+          </form>
+        </section>
+        <section class="panel list-panel">
+          <div class="panel-header list-header"><h2>Minhas tarefas</h2><div class="list-actions"><button id="exportar" class="btn small ghost" type="button">Exportar</button><label class="btn small ghost import-btn">Importar<input id="importarArquivo" type="file" accept=".json" hidden /></label></div></div>
+          <div class="toolbar"><input id="busca" type="search" placeholder="Buscar por tarefa ou disciplina..." aria-label="Buscar tarefas" /><div class="filtros" aria-label="Filtros de tarefas"><button class="filtro active" data-filtro="todas" type="button">Todas</button><button class="filtro" data-filtro="pendentes" type="button">Pendentes</button><button class="filtro" data-filtro="concluidas" type="button">Concluídas</button><button class="filtro" data-filtro="atrasadas" type="button">Atrasadas</button></div></div>
+          <ul id="listaTarefas" class="task-list"></ul><p id="vazio" class="empty-state" hidden>Nenhuma tarefa encontrada.</p>
+        </section>
+      </main>
     </div>
-    <span class="topo-selo">PAINEL ACADÊMICO</span>
-  </div>
-</header>
-
-<main class="container principal">
-  <section class="boas-vindas">
-    <div><span class="sobretitulo">ORGANIZAÇÃO INTELIGENTE</span><h2>Olá! Vamos colocar tudo em dia?</h2>
-    <p>Acompanhe suas atividades e mantenha seus prazos sob controle.</p></div>
-  </section>
-
-  <section class="indicadores">
-    <article class="indicador"><span class="indicador-icone">▤</span><div><span class="numero">{{ total }}</span><span class="legenda">Total de tarefas</span></div></article>
-    <article class="indicador"><span class="indicador-icone">✓</span><div><span class="numero">{{ concluidas }}</span><span class="legenda">Concluídas</span></div></article>
-    <article class="indicador"><span class="indicador-icone">◷</span><div><span class="numero">{{ pendentes }}</span><span class="legenda">Em aberto</span></div></article>
-    <article class="indicador"><span class="indicador-icone">!</span><div><span class="numero">{{ vencidas }}</span><span class="legenda">Vencidas</span></div></article>
-  </section>
-
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for categoria, mensagem in messages %}
-      <div class="mensagem {{ categoria }}">{{ mensagem }}</div>
-    {% endfor %}
-  {% endwith %}
-
-  <section class="painel formulario">
-    <div class="titulo-secao"><div><span class="sobretitulo">NOVA ATIVIDADE</span><h2>Adicionar tarefa</h2></div></div>
-    <form method="POST" action="{{ url_for('adicionar') }}" class="form-tarefa">
-      <div class="campo campo-titulo"><label for="titulo">Título da tarefa</label><input id="titulo" name="titulo" type="text" maxlength="150" placeholder="Ex.: Entrega do trabalho de matemática" required></div>
-      <div class="campo"><label for="prazo">Data do prazo</label><input id="prazo" name="prazo" type="text" placeholder="DD/MM/AAAA" pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" required></div>
-      <button class="btn btn-principal" type="submit">＋ Adicionar tarefa</button>
-    </form>
-  </section>
-
-  <section class="painel tarefas">
-    <div class="titulo-secao"><div><span class="sobretitulo">ACOMPANHAMENTO</span><h2>Suas tarefas</h2></div></div>
-    <nav class="filtros">
-      <a class="{% if filtro == 'todos' %}ativo{% endif %}" href="{{ url_for('index') }}">Todas</a>
-      <a class="{% if filtro == 'pendentes' %}ativo{% endif %}" href="{{ url_for('filtro_pendentes') }}">Pendentes</a>
-      <a class="{% if filtro == 'concluidas' %}ativo{% endif %}" href="{{ url_for('filtro_concluidas') }}">Concluídas</a>
-      <a class="{% if filtro == 'vencidas' %}ativo{% endif %}" href="{{ url_for('filtro_vencidas') }}">Vencidas</a>
-    </nav>
-    <form method="GET" action="{{ url_for('buscar') }}" class="busca">
-      <input type="search" name="termo" placeholder="Buscar tarefa pelo título..." value="{{ termo_busca or '' }}" required>
-      <button class="btn btn-secundario" type="submit">Buscar</button>
-      {% if filtro == 'busca' %}<a class="limpar" href="{{ url_for('index') }}">Limpar busca</a>{% endif %}
-    </form>
-
-    {% if tarefas %}
-    <div class="tabela-wrap"><table>
-      <thead><tr><th>Tarefa</th><th>Prazo</th><th>Status</th><th class="col-acoes">Ações</th></tr></thead>
-      <tbody>
-      {% for tarefa in tarefas %}
-      <tr class="{% if tarefa.concluida %}linha-concluida{% elif tarefa.status == 'Vencida' %}linha-vencida{% endif %}">
-        <td class="nome-tarefa">{{ tarefa.titulo }}</td>
-        <td>{{ tarefa.prazo }}</td>
-        <td>{% if tarefa.concluida %}<span class="badge concluida">Concluída</span>{% elif tarefa.status == 'Vencida' %}<span class="badge vencida">Vencida</span>{% else %}<span class="badge prazo">No prazo</span>{% endif %}</td>
-        <td class="acoes">
-          <form method="POST" action="{{ url_for('alternar', indice=tarefa.indice) }}"><button class="btn-acao concluir" type="submit">{% if tarefa.concluida %}Desfazer{% else %}Concluir{% endif %}</button></form>
-          <form method="POST" action="{{ url_for('excluir', indice=tarefa.indice) }}" onsubmit="return confirm('Deseja realmente excluir esta tarefa?');"><button class="btn-acao excluir" type="submit">Excluir</button></form>
-        </td>
-      </tr>
-      {% endfor %}
-      </tbody>
-    </table></div>
-    {% else %}
-      <div class="vazio"><div class="vazio-icone">✓</div><h3>Nenhuma tarefa encontrada</h3><p>Adicione uma atividade ou escolha outro filtro.</p></div>
-    {% endif %}
-  </section>
-</main>
-<footer>EduAgendaFácil © 2026 · Organização que facilita sua rotina</footer>
-</body>
+    <script src="app.js" defer></script>
+  </body>
 </html>

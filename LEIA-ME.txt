@@ -1,0 +1,8 @@
+Pasta docs do EduTarefas para publicar no GitHub Pages.
+
+Arquivos incluídos:
+- index.html
+- manifest.json
+- icon.svg
+
+ATENÇÃO: ainda faltam style.css e app.js, que são necessários para o visual e as funções da página. Adicione esses dois arquivos dentro de docs antes de considerar o site completo.
