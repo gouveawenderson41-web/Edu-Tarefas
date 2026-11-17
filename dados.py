@@ -1,78 +1,79 @@
-"""Funções de dados do EduTarefas. Os registros são persistidos em JSON."""
 import json
-from datetime import date, datetime
-from pathlib import Path
+import os
 import unicodedata
+from datetime import datetime
 
-ARQUIVO = Path(__file__).resolve().parent / "tarefas.json"
+ARQUIVO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tarefas.json")
 
 
 def normalizar(texto):
-    """Padroniza texto para buscas sem diferença entre maiúsculas/acentos."""
     texto = unicodedata.normalize("NFD", str(texto))
-    return "".join(c for c in texto if unicodedata.category(c) != "Mn").lower().strip()
+    texto = "".join(c for c in texto if unicodedata.category(c) != "Mn")
+    return texto.lower().strip()
+
+
+def indexar(tarefas):
+    for i, tarefa in enumerate(tarefas):
+        tarefa["indice"] = i
+    return tarefas
 
 
 def carregar():
-    """Lê a lista JSON; cria uma lista vazia se o arquivo não existir."""
+    if not os.path.exists(ARQUIVO):
+        return []
     try:
-        if not ARQUIVO.exists():
-            return []
-        with ARQUIVO.open("r", encoding="utf-8") as arquivo:
+        with open(ARQUIVO, "r", encoding="utf-8") as arquivo:
             dados = json.load(arquivo)
         return dados if isinstance(dados, list) else []
-    except (OSError, json.JSONDecodeError) as erro:
-        print(f"Aviso: não foi possível ler {ARQUIVO.name}: {erro}")
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError):
         return []
 
 
-def salvar(tarefas):
-    """Grava a lista de dicionários no arquivo JSON."""
+def salvar(dados):
+    with open(ARQUIVO, "w", encoding="utf-8") as arquivo:
+        json.dump(dados, arquivo, ensure_ascii=False, indent=2)
+
+
+def calcular_status_prazo(prazo):
     try:
-        with ARQUIVO.open("w", encoding="utf-8") as arquivo:
-            json.dump(tarefas, arquivo, ensure_ascii=False, indent=2)
-        return True
-    except OSError as erro:
-        print(f"Erro ao salvar tarefas: {erro}")
-        return False
+        data_prazo = datetime.strptime(prazo, "%d/%m/%Y").date()
+        return "Vencida" if data_prazo < datetime.now().date() else "No Prazo"
+    except (ValueError, TypeError):
+        return "Pendente"
 
 
-def obter_status(tarefa):
-    """Calcula o status usando a data local de hoje."""
-    if tarefa.get("concluida", False):
-        return "Concluída"
-    prazo = date.fromisoformat(tarefa["prazo"])
-    return "Vencida" if prazo < date.today() else "Pendente"
+def atualizar_status(tarefas):
+    for tarefa in tarefas:
+        tarefa["status"] = calcular_status_prazo(tarefa.get("prazo", ""))
+    return tarefas
 
 
-def listar():
-    """Devolve tarefas com posição e status calculado."""
-    resultado = []
-    for indice, tarefa in enumerate(carregar()):
-        item = dict(tarefa)
-        item["indice"] = indice
-        item["status"] = obter_status(item)
-        resultado.append(item)
-    return resultado
+def contar_concluidas(tarefas):
+    return sum(1 for tarefa in tarefas if tarefa.get("concluida", False))
 
 
 def adicionar_tarefa(titulo, prazo):
-    """Valida e cadastra tarefa; cada registro recebe data/hora de criação."""
-    titulo = str(titulo).strip()
+    titulo = titulo.strip() if isinstance(titulo, str) else ""
+    prazo = prazo.strip() if isinstance(prazo, str) else ""
     if not titulo:
         return False, "Informe o título da tarefa."
-    if len(titulo) > 150:
-        return False, "O título deve ter até 150 caracteres."
+    if not prazo:
+        return False, "Informe o prazo da tarefa."
     try:
-        data = datetime.strptime(prazo.strip(), "%d/%m/%Y").date()
-        if data.strftime("%d/%m/%Y") != prazo.strip():
-            raise ValueError("data inválida")
-    except (ValueError, AttributeError):
-        return False, "Informe um prazo válido no formato DD/MM/AAAA."
+        datetime.strptime(prazo, "%d/%m/%Y")
+    except ValueError:
+        return False, "Data inválida. Use DD/MM/AAAA."
+
     tarefas = carregar()
-    tarefas.append({"titulo": titulo, "prazo": data.isoformat(), "concluida": False,
-                    "criada_em": datetime.now().astimezone().isoformat(timespec="seconds")})
-    return (True, "Tarefa adicionada com sucesso.") if salvar(tarefas) else (False, "Não foi possível gravar os dados.")
+    tarefas.append({
+        "titulo": titulo,
+        "prazo": prazo,
+        "concluida": False,
+        "status": calcular_status_prazo(prazo),
+        "data_criacao": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    })
+    salvar(tarefas)
+    return True, f"Tarefa '{titulo}' adicionada com sucesso!"
 
 
 def alternar_conclusao(indice):
@@ -80,29 +81,34 @@ def alternar_conclusao(indice):
     if not isinstance(indice, int) or not 0 <= indice < len(tarefas):
         return False, "Tarefa não encontrada."
     tarefas[indice]["concluida"] = not tarefas[indice].get("concluida", False)
-    tarefas[indice]["atualizada_em"] = datetime.now().astimezone().isoformat(timespec="seconds")
-    return (True, "Status atualizado.") if salvar(tarefas) else (False, "Não foi possível gravar os dados.")
+    salvar(tarefas)
+    return True, "Status alterado com sucesso!"
 
 
 def remover_tarefa(indice):
     tarefas = carregar()
     if not isinstance(indice, int) or not 0 <= indice < len(tarefas):
         return False, "Tarefa não encontrada."
-    tarefas.pop(indice)
-    return (True, "Tarefa removida.") if salvar(tarefas) else (False, "Não foi possível gravar os dados.")
+    removida = tarefas.pop(indice)
+    salvar(tarefas)
+    return True, f"Tarefa '{removida.get('titulo', 'Tarefa')}' removida com sucesso!"
 
 
 def buscar_tarefas(termo):
+    tarefas = indexar(atualizar_status(carregar()))
     termo = normalizar(termo)
-    return [t for t in listar() if termo in normalizar(t["titulo"])]
+    if not termo:
+        return tarefas
+    return [t for t in tarefas if termo in normalizar(t.get("titulo", ""))]
 
 
-def filtrar_tarefas(filtro):
-    return [t for t in listar() if t["status"].casefold() == filtro.casefold()]
+def obter_pendentes(tarefas):
+    return [t for t in tarefas if not t.get("concluida", False)]
 
 
-def estatisticas():
-    tarefas = listar()
-    return {"total": len(tarefas), "concluidas": sum(t["concluida"] for t in tarefas),
-            "pendentes": sum(t["status"] == "Pendente" for t in tarefas),
-            "vencidas": sum(t["status"] == "Vencida" for t in tarefas)}
+def obter_concluidas(tarefas):
+    return [t for t in tarefas if t.get("concluida", False)]
+
+
+def obter_vencidas(tarefas):
+    return [t for t in tarefas if t.get("status") == "Vencida" and not t.get("concluida", False)]

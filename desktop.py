@@ -1,101 +1,176 @@
-"""Interface desktop Tkinter do EduTarefas. Execute com: python desktop.py"""
 import tkinter as tk
 from tkinter import ttk, messagebox
-import dados
+from dados import (
+    carregar, contar_concluidas, adicionar_tarefa, remover_tarefa,
+    buscar_tarefas, indexar, alternar_conclusao, atualizar_status,
+    obter_pendentes, obter_concluidas, obter_vencidas
+)
 
 
-class EduTarefasApp:
+class EduAgendaFacilApp:
     def __init__(self, raiz):
         self.raiz = raiz
-        raiz.title("EduTarefas - Controle de prazos")
-        raiz.geometry("850x600")
-        raiz.minsize(650, 480)
-        self.fundo = "#F7FAFF"
-        raiz.configure(bg=self.fundo)
-        topo = tk.Frame(raiz, bg="#155EEF", padx=18, pady=14)
-        topo.pack(fill="x")
-        tk.Label(topo, text="EduTarefas", font=("Arial", 20, "bold"), bg="#155EEF", fg="white").pack(anchor="w")
-        self.resumo = tk.Label(topo, bg="#155EEF", fg="white", font=("Arial", 10))
-        self.resumo.pack(anchor="w", pady=(4, 0))
-        form = tk.LabelFrame(raiz, text="Nova tarefa", padx=12, pady=10, bg=self.fundo)
-        form.pack(fill="x", padx=14, pady=12)
-        tk.Label(form, text="Título:", bg=self.fundo).grid(row=0, column=0, sticky="w", padx=5, pady=5)
-        self.titulo = tk.Entry(form, width=42)
-        self.titulo.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
-        tk.Label(form, text="Prazo (DD/MM/AAAA):", bg=self.fundo).grid(row=1, column=0, sticky="w", padx=5, pady=5)
-        self.prazo = tk.Entry(form, width=18)
-        self.prazo.grid(row=1, column=1, sticky="w", padx=5, pady=5)
-        tk.Button(form, text="Adicionar tarefa", command=self.adicionar, bg="#2563EB", fg="white").grid(row=0, column=2, rowspan=2, padx=10)
-        form.columnconfigure(1, weight=1)
-        area = tk.Frame(raiz, bg=self.fundo)
-        area.pack(fill="both", expand=True, padx=14, pady=4)
-        self.tabela = ttk.Treeview(area, columns=("titulo", "prazo", "status"), show="headings")
-        for col, titulo, largura in [("titulo", "Título", 440), ("prazo", "Prazo", 120), ("status", "Status", 130)]:
-            self.tabela.heading(col, text=titulo)
-            self.tabela.column(col, width=largura, anchor="w")
-        barra = ttk.Scrollbar(area, orient="vertical", command=self.tabela.yview)
-        self.tabela.configure(yscrollcommand=barra.set)
-        self.tabela.pack(side="left", fill="both", expand=True)
-        barra.pack(side="right", fill="y")
-        controles = tk.Frame(raiz, bg=self.fundo)
-        controles.pack(fill="x", padx=14, pady=10)
-        for texto, comando in [("Todas", lambda: self.atualizar()), ("Pendentes", lambda: self.atualizar("Pendente")), ("Concluídas", lambda: self.atualizar("Concluída")), ("Vencidas", lambda: self.atualizar("Vencida")), ("Concluir / desfazer", self.alternar), ("Excluir", self.excluir)]:
-            tk.Button(controles, text=texto, command=comando).pack(side="left", padx=3, pady=3)
-        tk.Label(controles, text="Buscar:", bg=self.fundo).pack(side="left", padx=(12, 3))
-        self.termo = tk.Entry(controles, width=20)
-        self.termo.pack(side="left", padx=3)
-        tk.Button(controles, text="Buscar", command=self.buscar).pack(side="left", padx=3)
-        self.atualizar()
+        self.raiz.title("EduAgendaFácil - Gestão de Tarefas")
+        self.raiz.geometry("900x700")
+        self.raiz.minsize(760, 600)
+        self.azul = "#1769aa"
+        self.azul_escuro = "#104b7a"
+        self.fundo = "#f3f7fc"
+        self.raiz.configure(bg=self.fundo)
+        self._estilo()
+        self._cabecalho()
+        self._formulario()
+        self._lista()
+        self._filtros()
+        self._atualizar_lista()
 
-    def atualizar(self, filtro=None, tarefas=None):
-        for item in self.tabela.get_children():
-            self.tabela.delete(item)
-        todas = dados.listar()
-        exibidas = tarefas if tarefas is not None else [t for t in todas if filtro is None or t["status"] == filtro]
-        for t in exibidas:
-            prazo = f"{t['prazo'][8:10]}/{t['prazo'][5:7]}/{t['prazo'][:4]}"
-            self.tabela.insert("", "end", iid=str(t["indice"]), values=(t["titulo"], prazo, t["status"]))
-        stats = dados.estatisticas()
-        self.resumo.config(text=f"Tarefas: {stats['total']}    Concluídas: {stats['concluidas']}    Pendentes: {stats['pendentes']}    Vencidas: {stats['vencidas']}")
+    def _estilo(self):
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure("Treeview", rowheight=30, font=("Arial", 10))
+        style.configure("Treeview.Heading", font=("Arial", 10, "bold"),
+                        background="#dcecff", foreground=self.azul_escuro)
 
-    def adicionar(self):
-        ok, mensagem = dados.adicionar_tarefa(self.titulo.get(), self.prazo.get())
-        (messagebox.showinfo if ok else messagebox.showerror)("EduTarefas", mensagem)
+    def _cabecalho(self):
+        frame = tk.Frame(self.raiz, bg=self.azul, pady=14)
+        frame.pack(fill=tk.X)
+        tk.Label(frame, text="EduAgendaFácil", font=("Arial", 22, "bold"),
+                 bg=self.azul, fg="white").pack()
+        tk.Label(frame, text="Organize suas tarefas e não perca nenhum prazo",
+                 font=("Arial", 10), bg=self.azul, fg="#eaf4ff").pack(pady=(3, 8))
+        linha = tk.Frame(frame, bg=self.azul)
+        linha.pack()
+        self.label_total = tk.Label(linha, text="Total: 0", bg=self.azul,
+                                    fg="white", font=("Arial", 10, "bold"))
+        self.label_total.pack(side=tk.LEFT, padx=12)
+        self.label_concluidas = tk.Label(linha, text="Concluídas: 0", bg=self.azul,
+                                         fg="white", font=("Arial", 10, "bold"))
+        self.label_concluidas.pack(side=tk.LEFT, padx=12)
+
+    def _formulario(self):
+        frame = tk.LabelFrame(self.raiz, text="Adicionar nova tarefa",
+                              bg=self.fundo, fg=self.azul_escuro,
+                              font=("Arial", 11, "bold"), padx=12, pady=10)
+        frame.pack(fill=tk.X, padx=14, pady=12)
+        tk.Label(frame, text="Título:", bg=self.fundo).grid(row=0, column=0, sticky="w")
+        self.entry_titulo = tk.Entry(frame, width=42, font=("Arial", 10))
+        self.entry_titulo.grid(row=0, column=1, padx=8, pady=5, sticky="ew")
+        tk.Label(frame, text="Prazo (DD/MM/AAAA):", bg=self.fundo).grid(row=1, column=0, sticky="w")
+        self.entry_prazo = tk.Entry(frame, width=18, font=("Arial", 10))
+        self.entry_prazo.grid(row=1, column=1, padx=8, pady=5, sticky="w")
+        tk.Button(frame, text="Adicionar tarefa", command=self._adicionar,
+                  bg=self.azul, fg="white", activebackground=self.azul_escuro,
+                  relief=tk.FLAT, padx=14, pady=8).grid(row=0, column=2, rowspan=2, padx=12)
+        frame.columnconfigure(1, weight=1)
+
+    def _lista(self):
+        frame = tk.LabelFrame(self.raiz, text="Minhas tarefas", bg=self.fundo,
+                              fg=self.azul_escuro, font=("Arial", 11, "bold"),
+                              padx=10, pady=10)
+        frame.pack(fill=tk.BOTH, expand=True, padx=14, pady=5)
+        colunas = ("Título", "Prazo", "Status", "Concluída")
+        self.tree = ttk.Treeview(frame, columns=colunas, show="headings")
+        for c in colunas:
+            self.tree.heading(c, text=c)
+        self.tree.column("Título", width=420)
+        self.tree.column("Prazo", width=120, anchor="center")
+        self.tree.column("Status", width=140, anchor="center")
+        self.tree.column("Concluída", width=100, anchor="center")
+        scroll = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scroll.set)
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+    def _filtros(self):
+        frame = tk.Frame(self.raiz, bg=self.fundo)
+        frame.pack(fill=tk.X, padx=14, pady=10)
+        botoes = [
+            ("Todas", self._ver_todas), ("Pendentes", self._pendentes),
+            ("Concluídas", self._concluidas), ("Vencidas", self._vencidas),
+            ("Concluir / desfazer", self._alternar), ("Remover", self._remover)
+        ]
+        for texto, comando in botoes:
+            tk.Button(frame, text=texto, command=comando, bg=self.azul,
+                      fg="white", relief=tk.FLAT, padx=8, pady=6).pack(side=tk.LEFT, padx=3)
+        busca = tk.Frame(self.raiz, bg=self.fundo)
+        busca.pack(fill=tk.X, padx=18, pady=(0, 12))
+        tk.Label(busca, text="Buscar:", bg=self.fundo).pack(side=tk.LEFT)
+        self.entry_busca = tk.Entry(busca, font=("Arial", 10))
+        self.entry_busca.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8)
+        self.entry_busca.bind("<Return>", lambda event: self._buscar())
+        tk.Button(busca, text="Pesquisar", command=self._buscar, bg="#2d86d5",
+                  fg="white", relief=tk.FLAT, padx=10).pack(side=tk.LEFT)
+        tk.Button(busca, text="Limpar", command=self._ver_todas, bg="#718096",
+                  fg="white", relief=tk.FLAT, padx=10).pack(side=tk.LEFT, padx=5)
+
+    def _adicionar(self):
+        ok, msg = adicionar_tarefa(self.entry_titulo.get(), self.entry_prazo.get())
+        (messagebox.showinfo if ok else messagebox.showerror)("EduAgendaFácil", msg)
         if ok:
-            self.titulo.delete(0, "end")
-            self.prazo.delete(0, "end")
-            self.atualizar()
+            self.entry_titulo.delete(0, tk.END)
+            self.entry_prazo.delete(0, tk.END)
+            self._ver_todas()
 
-    def indice_selecionado(self):
-        selecao = self.tabela.selection()
+    def _selecionado(self):
+        selecao = self.tree.selection()
         if not selecao:
-            messagebox.showwarning("Atenção", "Selecione uma tarefa na lista.")
+            messagebox.showwarning("Atenção", "Selecione uma tarefa.")
             return None
         return int(selecao[0])
 
-    def alternar(self):
-        indice = self.indice_selecionado()
+    def _alternar(self):
+        indice = self._selecionado()
         if indice is not None:
-            ok, msg = dados.alternar_conclusao(indice)
-            if not ok: messagebox.showerror("Erro", msg)
-            self.atualizar()
+            ok, msg = alternar_conclusao(indice)
+            if not ok:
+                messagebox.showerror("Erro", msg)
+            self._atualizar_lista()
 
-    def excluir(self):
-        indice = self.indice_selecionado()
-        if indice is not None and messagebox.askyesno("Confirmar", "Excluir a tarefa selecionada?"):
-            ok, msg = dados.remover_tarefa(indice)
-            if not ok: messagebox.showerror("Erro", msg)
-            self.atualizar()
+    def _remover(self):
+        indice = self._selecionado()
+        if indice is not None and messagebox.askyesno("Confirmar", "Deseja remover esta tarefa?"):
+            ok, msg = remover_tarefa(indice)
+            (messagebox.showinfo if ok else messagebox.showerror)("EduAgendaFácil", msg)
+            self._atualizar_lista()
 
-    def buscar(self):
-        termo = self.termo.get().strip()
+    def _atualizar_lista(self, tarefas=None):
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        todas = indexar(atualizar_status(carregar()))
+        for t in (tarefas if tarefas is not None else todas):
+            feita = t.get("concluida", False)
+            self.tree.insert("", "end", iid=str(t["indice"]),
+                             values=(t.get("titulo", ""), t.get("prazo", ""),
+                                     "Concluída" if feita else t.get("status", ""),
+                                     "Sim" if feita else "Não"))
+        self.label_total.config(text=f"Total: {len(todas)}")
+        self.label_concluidas.config(text=f"Concluídas: {contar_concluidas(todas)}")
+
+    def _ver_todas(self):
+        self.entry_busca.delete(0, tk.END)
+        self._atualizar_lista()
+
+    def _pendentes(self):
+        t = indexar(atualizar_status(carregar()))
+        self._atualizar_lista(obter_pendentes(t))
+
+    def _concluidas(self):
+        t = indexar(atualizar_status(carregar()))
+        self._atualizar_lista(obter_concluidas(t))
+
+    def _vencidas(self):
+        t = indexar(atualizar_status(carregar()))
+        self._atualizar_lista(obter_vencidas(t))
+
+    def _buscar(self):
+        termo = self.entry_busca.get().strip()
         if not termo:
-            messagebox.showwarning("Busca", "Digite um título para buscar.")
+            messagebox.showwarning("Atenção", "Digite algo para pesquisar.")
             return
-        self.atualizar(tarefas=dados.buscar_tarefas(termo))
+        self._atualizar_lista(buscar_tarefas(termo))
 
 
 if __name__ == "__main__":
-    janela = tk.Tk()
-    EduTarefasApp(janela)
-    janela.mainloop()
+    raiz = tk.Tk()
+    EduAgendaFacilApp(raiz)
+    raiz.mainloop()
